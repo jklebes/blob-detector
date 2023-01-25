@@ -1,4 +1,4 @@
-function image_out=annotate_image(image, blobs, diameter)
+function image_out=annotate_image(image, blobs)
 %draws dots for now, circles later
 im_double = cast(image, 'double')/255;
 blobs_double = cast(blobs, 'double');
