@@ -3,28 +3,34 @@ LoG blob detection.
 
 In progress
 
-#blobdetect
-For objects with uniform diameter).
+# blobdetect
+LoG detector for objects with user-estimated uniform diameter.
 
-####arguments
+Usage 
 
-```image```
+```blobmask=blobdetect(image,8)```
 
-```diameter``` Diameter of expected objects.
+#### Arguments
 
-```kernel```
+```image``` greyscale image / 2D array.
 
-```dark_background``` By default darks objects on white background are expected, if the 
-image shows bright objects on dark background set this to true.
+```diameter``` Diameter of expected objects (in pixels).
 
-```kernel_size``` Size of LoG kernel matrix (gets rounded up to nearest odd number).
+#### Optional keyword arguments
 
-####Output
+```darkBackground``` By default dark objects on white background are expected, if the 
+image shows bright objects on dark background set this to true.  Default ```false```.
+
+```medianFilter``` The prepocessing step improves quality, default ```true```.
+
+```kernelSize``` Size of LoG kernel matrix (gets rounded up to nearest odd number).  Default ```9```.
+
+#### Output
 ```blobs``` sparse matrix of blob centers.
 
-#annotate_image
+# annotate_image
 
-Simple utility to inspect output.
+Simple utility to inspect output, currently adds magenta points to the image.
 
 
 
