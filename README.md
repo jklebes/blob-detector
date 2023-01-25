@@ -30,5 +30,7 @@ image instead shows bright objects on dark background set this to ```true```.  D
 
 Simple utility to inspect output, currently adds magenta points to the image.
 
+```image_out=annotate_image(image, blobmask)```
+
 
 
