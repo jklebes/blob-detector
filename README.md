@@ -1,5 +1,5 @@
 # blob-detector
-LoG blob detection.
+basic LoG blob detection.
 
 # blobdetect
 LoG detector for objects with user-estimated uniform diameter.
