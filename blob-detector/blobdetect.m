@@ -26,7 +26,6 @@ end
 kernel=LoG_kernel(diameter, p.Results.KernelSize);
 
 %FFTconvolve with the kernel
-%conv2
 image_conv = conv2(image, kernel, 'same');
 
 %detect local maxima
