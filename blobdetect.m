@@ -1,11 +1,11 @@
-function blobs = blobdetect(image, diameter, invert, kernel_size)
-%LOGBLOBS Summary of this function goes here
-%   Detailed explanation goes here
+function blobs = blobdetect(image, diameter, dark_background, kernel_size)
+%BLOBDETECT Find locations of dark/bright features.
+%
 
 %argparse
 
-if invert
-    image=imcomplement(image)
+if dark_background
+    image=imcomplement(image);
 end
 
 %make the LoG kernel
@@ -29,10 +29,7 @@ kernel= [0,-1,0;-1,4,-1;0,-1,0];
 end
 
 function kernel = LoG_kernel(diameter, kernel_size)
-%matrices of kernelsize, showing x and y ditance from center
-%TODO what should sigma be
-sigma2 = sqrt(2)*diameter;
-
+sigma2 = sqrt(2)*diameter; %sigma^2
 %arrays of x, y coordinates distance from center
 %handle odd/even kernel_size - always make an odd kernel size,
 %rounding up
