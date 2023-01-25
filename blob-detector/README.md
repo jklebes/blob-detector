@@ -18,12 +18,12 @@ Usage
 
 #### Optional keyword arguments
 
-```darkBackground``` By default dark objects on white background are expected, if the 
-image shows bright objects on dark background set this to true.  Default ```false```.
+```DarkBackground``` By default dark objects on white background are expected, if the 
+image instead shows bright objects on dark background set this to ```true```.  Default ```false```.
 
-```medianFilter``` The prepocessing step improves quality, default ```true```.
+```MedianFilter``` The prepocessing step improves quality, default ```true```.
 
-```kernelSize``` Size of LoG kernel matrix (gets rounded up to nearest odd number).  Default ```9```.
+```KernelSize``` Size of LoG kernel matrix (gets rounded up to nearest odd number).  Default ```9```.
 
 #### Output
 ```blobs``` sparse matrix of blob centers.
