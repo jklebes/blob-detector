@@ -1,15 +1,29 @@
-function blobs = blobdetect(image, diameter, dark_background, kernel_size)
+function blobs = blobdetect(image, diameter,varargin)
 %BLOBDETECT Find locations of dark/bright features.
 %
 
 %argparse
+p = inputParser;
 
-if dark_background
+addRequired(p,'image',@(x) isnumeric(x)&&ismatrix(x));
+addRequired(p,'diameter', @(x) isempty(x)||(isnumeric(x)&&0<x));
+
+addParameter(p,'DarkBackground', false, @(x)islogical(x));
+addParameter(p,'MedianFilter', true, @(x)islogical(x));
+addParameter(p,'KernelSize', 9, @(x)isinteger(x));
+
+parse(p, image, diameter, varargin{:})
+
+if p.Results.DarkBackground
     image=imcomplement(image);
 end
 
+if p.Results.MedianFilter
+    %whatever the default connectivity and radius is
+    image=medfilt2(image);
+end
 %make the LoG kernel
-kernel=LoG_kernel(diameter, kernel_size);
+kernel=LoG_kernel(diameter, p.Results.KernelSize);
 
 %FFTconvolve with the kernel
 %conv2
@@ -24,7 +38,7 @@ blobs = maxima;
 end
 
 function kernel = Laplacian_kernel()
-%simple kernel for test
+%simple kernel for testing
 kernel= [0,-1,0;-1,4,-1;0,-1,0];
 end
 
