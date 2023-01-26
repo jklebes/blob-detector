@@ -16,8 +16,8 @@ Usage
 
 #### Optional keyword arguments
 
-```DarkBackground``` By default dark objects on white background are expected, if the 
-image instead shows bright objects on dark background set this to ```true```.  Default ```false```.
+```DarkBackground``` By default bright objects on dark background are expected, if the 
+image instead shows dark objects on light background set this to ```false```.  Default ```true```.
 
 ```MedianFilter``` The prepocessing step improves quality, default ```true```.
 
