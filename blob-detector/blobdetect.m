@@ -10,7 +10,7 @@ addRequired(p,'diameter', @(x) isempty(x)||(isnumeric(x)&&0<x));
 
 addParameter(p,'DarkBackground', false, @(x)islogical(x));
 addParameter(p,'MedianFilter', true, @(x)islogical(x));
-addParameter(p,'KernelSize', 9, @(x)isinteger(x));
+addParameter(p,'KernelSize', 9, @(x)isnumeric(x)&&x>=1);
 
 parse(p, image, diameter, varargin{:})
 
@@ -33,7 +33,9 @@ image_conv = conv2(image, kernel, 'same');
 maxima = imregionalmax(image_conv);
 
 %return list of coordinates
-blobs = maxima;
+blobs_mask = maxima;
+[xs,ys]=find(blobs_mask);
+blobs = [xs,ys];
 end
 
 function kernel = Laplacian_kernel()
