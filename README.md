@@ -24,7 +24,7 @@ image instead shows bright objects on dark background set this to ```true```.  D
 ```KernelSize``` Size of LoG kernel matrix (gets rounded up to nearest odd number).  Default ```9```.
 
 #### Output
-```[x,y]``` coordinates of blob centers.
+```blobcoords``` \[xs, ys\] coordinates of blob centers.
 
 # annotate_image
 
