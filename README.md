@@ -24,13 +24,13 @@ image instead shows bright objects on dark background set this to ```true```.  D
 ```KernelSize``` Size of LoG kernel matrix (gets rounded up to nearest odd number).  Default ```9```.
 
 #### Output
-```blobs``` sparse matrix of blob centers.
+```[x,y]``` coordinates of blob centers.
 
 # annotate_image
 
-Simple utility to inspect output, currently adds magenta points to the image.
+Simple utility to inspect output, adds magenta circles to the image.
 
-```image_out=annotate_image(image, blobmask)```
+```image_out=annotate_image(image, coords, diameters)```
 
 
 
