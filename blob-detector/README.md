@@ -6,7 +6,7 @@ LoG detector for objects with user-estimated uniform diameter.
 
 Usage 
 
-```blobmask=blobdetect(image,8)```
+```blobcoords=blobdetect(image,8)```
 
 #### Arguments
 
