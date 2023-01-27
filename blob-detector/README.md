@@ -38,3 +38,6 @@ This returns an RGB array.  Alternatively, for immediate display as a figure, yo
 
 
 
+# Not yet implemented
+* handle image edges
+* automatically adjust kernel size
