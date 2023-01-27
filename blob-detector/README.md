@@ -1,6 +1,10 @@
 # blob-detector
 basic LoG blob detection. [![View blob-detector on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://uk.mathworks.com/matlabcentral/fileexchange/123905-blob-detector)
 
++ now DoG
+
+loosely following trackmate
+
 ## blobdetect
 LoG (Laplacian of Gaussian) detector suitable for objects with user-estimated uniform diameter.
 
@@ -15,6 +19,8 @@ Usage
 ```diameter``` Diameter of expected objects (in pixels).
 
 #### Optional keyword arguments
+
+```Filter``` select type of filter, from ```"LoG"```, ```"DoG"```, default ```"LoG"```.
 
 ```DarkBackground``` By default bright objects on dark background are expected, if the 
 image instead shows dark objects on light background set this to ```false```.  Default ```true```.
