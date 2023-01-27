@@ -23,7 +23,7 @@ if p.Results.MedianFilter
     image=medfilt2(image);
 end
 %make the LoG kernel
-sigma_sq = sqrt(2)*diameter; %sigma^2
+sigma_sq = diameter/(sqrt(2)^3); %sigma^2
 kernel=LoG_kernel(sigma_sq, p.Results.KernelSize);
 
 %FFTconvolve with the kernel
@@ -34,8 +34,7 @@ image_conv = conv2(image, kernel, 'same');
 maxima = imregionalmax(image_conv);
 
 %return list of coordinates
-blobs_mask = maxima;
-[xs,ys]=find(blobs_mask);
+[xs,ys]=find(maxima);
 blobs = [xs,ys];
 end
 
@@ -52,11 +51,12 @@ range=-floor(kernel_size/2):floor(kernel_size/2);
 [x,y] = ndgrid(range,range);
 %LoG kernel formula
 d=(x.^2+y.^2)/(2*sigma_sq);
-kernel= -1/(pi*sigma_sq)*(1-d)*exp(-d);
+kernel= -1/(pi*sigma_sq^2)*(1-d).*exp(-d);
 %TODO should I discretize to ints?
 end
 
 function kernel = Gaussian_kernel(sigma_sq, kernel_size)
+%DoG faster?  Good for small objects.
 %arrays of x, y coordinates distance from center
 %handle odd/even kernel_size - always make an odd kernel size,
 %rounding up
@@ -64,6 +64,6 @@ range=-floor(kernel_size/2):floor(kernel_size/2);
 [x,y] = ndgrid(range,range);
 %DoG formula: convolve with each gaussian
 d=(x.^2+y.^2)/(2*sigma_sq);
-kernel= -1/(pi*sigma)*exp(-d);
+kernel= -1/(pi*sigma^2)*exp(-d);
 %TODO should I discretize to ints?
 end
