@@ -11,6 +11,7 @@ addRequired(p,'diameter', @(x) isempty(x)||(isnumeric(x)&&0<x));
 addParameter(p,'DarkBackground', true, @(x)islogical(x));
 addParameter(p,'MedianFilter', true, @(x)islogical(x));
 addParameter(p,'KernelSize', 9, @(x)isnumeric(x)&&x>=1);
+addParameter(p,'OverlapFilter', true, @(x)islogical(x));
 
 parse(p, image, diameter, varargin{:})
 
@@ -32,6 +33,8 @@ image_conv = conv2(image, kernel, 'same');
 %detect local maxima
 %TODO handle edges
 maxima = imregionalmax(image_conv);
+
+%TODO overlapfilter
 
 %return list of coordinates
 [xs,ys]=find(maxima);
@@ -57,13 +60,4 @@ end
 
 function kernel = Gaussian_kernel(sigma_sq, kernel_size)
 %DoG faster?  Good for small objects.
-%arrays of x, y coordinates distance from center
-%handle odd/even kernel_size - always make an odd kernel size,
-%rounding up
-range=-floor(kernel_size/2):floor(kernel_size/2);
-[x,y] = ndgrid(range,range);
-%DoG formula: convolve with each gaussian
-d=(x.^2+y.^2)/(2*sigma_sq);
-kernel= -1/(pi*sigma^2)*exp(-d);
-%TODO should I discretize to ints?
 end
