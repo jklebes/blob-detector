@@ -19,7 +19,7 @@ Usage
 ```DarkBackground``` By default bright objects on dark background are expected, if the 
 image instead shows dark objects on light background set this to ```false```.  Default ```true```.
 
-```MedianFilter``` The prepocessing step improves quality, default ```true```.
+```MedianFilter``` logical or integer.  The median filter prepocessing step improves quality, default ```true``` and size 3.
 
 ```KernelSize``` Size of LoG kernel matrix (gets rounded up to nearest odd number).  Default ```9```.
 
