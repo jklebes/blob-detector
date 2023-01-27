@@ -1,7 +1,7 @@
 # blob-detector
 basic LoG blob detection. [![View blob-detector on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://uk.mathworks.com/matlabcentral/fileexchange/123905-blob-detector)
 
-# blobdetect
+## blobdetect
 LoG (Laplacian of Gaussian) detector suitable for objects with user-estimated uniform diameter.
 
 Usage 
@@ -28,7 +28,7 @@ image instead shows dark objects on light background set this to ```false```.  D
 #### Output
 ```blobcoords``` \[xs, ys\] coordinates of blob centers.
 
-# annotate_image
+## annotate_image
 
 Simple utility to inspect output, adds magenta circles to the image.
 
@@ -38,3 +38,6 @@ This returns an RGB array.  Alternatively, for immediate display as a figure, yo
 
 
 
+# Not yet implemented
+* handle image edges
+* automatically adjust kernel size
