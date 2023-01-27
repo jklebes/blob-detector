@@ -12,6 +12,7 @@ addParameter(p,'DarkBackground', true, @(x)islogical(x));
 addParameter(p,'MedianFilter', true, @(x)islogical(x));
 addParameter(p,'KernelSize', 9, @(x)isnumeric(x)&&x>=1);
 addParameter(p,'OverlapFilter', true, @(x)islogical(x));
+addParameter(p,'IntensityFilter', true, @(x)islogical(x));
 
 parse(p, image, diameter, varargin{:})
 
@@ -24,7 +25,8 @@ if p.Results.MedianFilter
     image=medfilt2(image);
 end
 %make the LoG kernel
-sigma_sq = diameter/(sqrt(2)^3); %sigma^2
+sigma_sq = (diameter/(sqrt(2)^3))^2; %sigma = r / sqrt(D) as others use this
+    %wrong on wikipedia?
 kernel=LoG_kernel(sigma_sq, p.Results.KernelSize);
 
 %FFTconvolve with the kernel
@@ -34,11 +36,19 @@ image_conv = conv2(image, kernel, 'same');
 %TODO handle edges
 maxima = imregionalmax(image_conv);
 
-%TODO overlapfilter
-
 %return list of coordinates
 [xs,ys]=find(maxima);
-blobs = [xs,ys];
+
+%TODO each maximum is assiged a quality score.  for now just intensity.
+quality = zeros([size(xs),1]);
+for i=1:size(xs)
+    quality(i)=image_conv(xs(i),ys(i));
+end
+
+if p.Results.OverlapFilter
+    [xs,ys, quality] = overlap_filter(xs,ys,quality,diameter);
+end
+    blobs = [xs,ys];
 end
 
 function kernel = Laplacian_kernel()
@@ -60,4 +70,26 @@ end
 
 function kernel = Gaussian_kernel(sigma_sq, kernel_size)
 %DoG faster?  Good for small objects.
+end
+
+function [xs, ys, quality] = overlap_filter(xs,ys,quality,diameter)
+del_list = [];
+rad_sq=(diameter/2)^2;
+for i=1:size(xs)
+    if ~ismember(i, del_list)
+    for j=i+1:size(xs)
+        if ~ismember(j, del_list) && (xs(i)-xs(j))^2+(ys(i)-ys(j))^2 < rad_sq
+            %delete weaker object
+            if quality(i)<quality(j)
+                del_list(end+1)=i;
+            else
+                del_list(end+1)=j;
+            end
+        end
+    end
+    end
+end
+xs(del_list)=[];
+ys(del_list)=[];
+quality(del_list)=[];
 end
