@@ -39,7 +39,7 @@ image_conv = convn(image, kernel, 'same');
 maxima = imregionalmax(image_conv);
 
 %return list of coordinates
-[xs,ys, zs]=find(maxima);
+[xs,ys, zs]=find3D(maxima);
 
 %TODO each maximum is assiged a quality score.  for now just intensity.
 quality = zeros([size(xs),1]);
@@ -51,6 +51,11 @@ quality = zeros([size(xs),1]);
 %    [xs,ys, zs, quality] = overlap_filter(xs,ys,quality,diameter);
 %end
 blobs = [xs,ys,zs];
+end
+
+function [xs, ys, zs] = find3D(array)
+[xs, y_s] = find(array);
+[ys, zs] = ind2sub([size(array,2), size(array, 3)], y_s);
 end
 
 function kernel = Laplacian_kernel_3D()
