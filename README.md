@@ -1,7 +1,7 @@
 # blob-detector
 basic LoG blob detection. [![View blob-detector on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://uk.mathworks.com/matlabcentral/fileexchange/123905-blob-detector)
 
-+ now DoG
+now plus DoG option
 
 loosely following trackmate
 
