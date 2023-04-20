@@ -14,6 +14,7 @@ addParameter(p,'MedianFilter', true, @(x)islogical(x));
 addParameter(p,'KernelSize', 9, @(x)isnumeric(x)&&x>=1);
 addParameter(p,'OverlapFilter', true, @(x)islogical(x));
 addParameter(p,'IntensityFilter', true, @(x)islogical(x));
+addParameter(p,'BorderWdith', [], @(x)isnumeric(x)&&x>=1);
 
 parse(p, image, diameter, varargin{:})
 
@@ -24,6 +25,12 @@ end
 if p.Results.MedianFilter
     %whatever the default connectivity and radius is
     image=medfilt2(image);
+end
+
+if isempty(p.Results.BorderWidth)
+   BorderWidth=ceiling(diameter/2);
+else
+   BorderWidth=p.Results.BorderWidth;
 end
 
 switch p.Results.Filter
@@ -46,8 +53,11 @@ switch p.Results.Filter
         image_conv = image_conv_2 - image_conv_1 ;
 end
 %detect local maxima
-%TODO handle edges
 maxima = imregionalmax(image_conv);
+
+%handle edge
+maxima(BorderWidth:end-BorderWidth,:)=0;
+maxima(:,BorderWidth:end-BorderWidth)=0;
 
 %return list of coordinates
 [xs,ys]=find(maxima);
@@ -85,13 +95,13 @@ function kernel = Gaussian_kernel(sigma_sq, kernel_size)
 %for DoG
 range=-floor(kernel_size/2):floor(kernel_size/2);
 [x,y] = ndgrid(range,range);
-%Just a gaussian kernel
+%Just a gaussian kernel (2D)
 d=(x.^2+y.^2)/(2*sigma_sq);
 kernel= 1/(2*pi*sigma_sq)*exp(-d);
 end
 
 function [xs, ys, quality] = overlap_filter(xs,ys,quality,diameter)
-del_list = [];
+del_list = []; %list of indices to delete later
 rad_sq=(diameter/2)^2;
 for i=1:size(xs)
     if ~ismember(i, del_list)
