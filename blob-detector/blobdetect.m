@@ -14,7 +14,9 @@ addParameter(p,'MedianFilter', true, @(x)islogical(x));
 addParameter(p,'KernelSize', 9, @(x)isnumeric(x)&&x>=1);
 addParameter(p,'OverlapFilter', true, @(x)islogical(x));
 addParameter(p,'IntensityFilter', true, @(x)islogical(x));
-addParameter(p,'BorderWdith', [], @(x)isnumeric(x)&&x>=1);
+addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0);
+
+imhmax_height=10;
 
 parse(p, image, diameter, varargin{:})
 
@@ -23,12 +25,12 @@ if p.Results.DarkBackground
 end
 
 if p.Results.MedianFilter
-    %whatever the default connectivity and radius is
+    %using matlab's default connectivity and radius is
     image=medfilt2(image);
 end
 
 if isempty(p.Results.BorderWidth)
-   BorderWidth=ceiling(diameter/2);
+   BorderWidth=ceil(diameter/2);
 else
    BorderWidth=p.Results.BorderWidth;
 end
@@ -53,7 +55,7 @@ switch p.Results.Filter
         image_conv = image_conv_2 - image_conv_1 ;
 end
 %detect local maxima
-maxima = imregionalmax(image_conv);
+maxima = imregionalmax(imhmax(image_conv, imhmax_height));
 
 %handle edge
 maxima(BorderWidth:end-BorderWidth,:)=0;
@@ -81,7 +83,7 @@ end
 
 function kernel = LoG_kernel(sigma_sq, kernel_size)
 %arrays of x, y coordinates distance from center
-%handle odd/even kernel_size - always make an odd kernel size,
+%handle odd/even kernel_size - always makes an odd kernel size,
 %rounding up
 range=-floor(kernel_size/2):floor(kernel_size/2);
 [x,y] = ndgrid(range,range);
