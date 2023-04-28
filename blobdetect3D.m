@@ -13,8 +13,15 @@ addParameter(p,'MedianFilter', true, @(x)islogical(x));
 addParameter(p,'KernelSize', 9, @(x)isnumeric(x)&&x>=1);
 addParameter(p,'OverlapFilter', true, @(x)islogical(x));
 addParameter(p,'IntensityFilter', true, @(x)islogical(x));
-
+addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0); 
+imhmax_height=10;
 parse(p, image, diameter, varargin{:})
+
+if isempty(p.Results.BorderWidth)
+   BorderWidth=ceil(diameter/2);
+else
+   BorderWidth=p.Results.BorderWidth;
+end
 
 if p.Results.DarkBackground
     for i=1:size(image,3)
@@ -24,7 +31,7 @@ if p.Results.DarkBackground
 end
 
 if p.Results.MedianFilter
-    %whatever the default connectivity and radius is
+    %with matlab default connectivity and radius
     image=medfilt3(image);
 end
 %make the LoG kernel
@@ -35,22 +42,33 @@ kernel=LoG_kernel_3D(sigma_, p.Results.KernelSize);
 image_conv = convn(image, kernel, 'same');
 
 %detect local maxima
-%TODO handle edges
-maxima = imregionalmax(image_conv);
+maxima = imregionalmax(imhmax(image_conv, 2));
+
+%handle edges
+maxima([1:BorderWidth end-BorderWidth:end],:,:)=0;
+maxima(:,[1:BorderWidth end-BorderWidth:end],:)=0;
+try
+    maxima(:,:,[1:BorderWidth end-BorderWidth:end])=0;
+catch Error
+    disp('Maybe you entered a 2D image into blobdetect3D')
+    rethrow(Error)
+end
 
 %return list of coordinates
 [xs,ys, zs]=find3D(maxima);
 
-%TODO each maximum is assiged a quality score.  for now just intensity.
+% each maximum is assiged a quality score.  for now just intensity.
 quality = zeros([size(xs),1]);
-%for i=1:size(xs)
-%    quality(i)=image_conv(xs(i), ys(i), zs(i));
-%end
+for i=1:size(xs)
+    quality(i)=image_conv(xs(i), ys(i), zs(i));
+end
+quality=rescale(quality);
 
-%if p.Results.OverlapFilter
-%    [xs,ys, zs, quality] = overlap_filter(xs,ys,quality,diameter);
-%end
-blobs = [xs,ys,zs];
+%3D version of overlap filter
+if p.Results.OverlapFilter
+    [xs,ys, zs, quality] = overlap_filter3D(xs,ys,zs,quality,diameter);
+end
+    blobs = [xs,ys,zs, quality];
 end
 
 function [xs, ys, zs] = find3D(array)
@@ -64,7 +82,7 @@ kernel=zeros([3 3 3]);
 kernel(:,:,1)= [0,0,0;0,-1,0;0,0,0];
 kernel(:,:,2)= [0,-1,0;-1,6,-1;0,-1,0];
 kernel(:,:,3)= [0,0,0;0,-1,0;0,0,0];
-end
+end   
 
 function kernel = LoG_kernel_3D(sigma_, kernel_size)
 %arrays of x, y coordinates distance from center
@@ -74,7 +92,7 @@ range=-floor(kernel_size/2):floor(kernel_size/2);
 [x,y,z] = ndgrid(range,range, range);
 %LoG kernel formula
 d=(x.^2+y.^2+z.^2)/(2*sigma_^2);
-kernel= -1/((pi*2)^(3/2)*sigma_^5)*(3-d).*exp(-d);
+kernel= -1/((pi*2)^(3/2)*sigma_^5)*(3-2*d).*exp(-d);
 %TODO should I discretize to ints?
 end
 
@@ -82,14 +100,14 @@ function kernel = Gaussian_kernel_nD(sigma_sq, kernel_size)
 %DoG faster?  Good for small objects.
 end
 
-function [xs, ys, quality] = overlap_filter(xs,ys,quality,diameter)
+function [xs, ys,zs, quality] = overlap_filter3D(xs,ys,zs,quality,diameter)
 del_list = [];
 rad_sq=(diameter/2)^2;
 for i=1:size(xs)
     if ~ismember(i, del_list)
     for j=i+1:size(xs)
-        if ~ismember(j, del_list) && (xs(i)-xs(j))^2+(ys(i)-ys(j))^2 < rad_sq
-            %delete weaker object
+        if ~ismember(j, del_list) && (xs(i)-xs(j))^2+(ys(i)-ys(j))^2+(zs(i)-zs(j))^2 < rad_sq
+            %delete weaker object - add to list to remove later
             if quality(i)<quality(j)
                 del_list(end+1)=i;
             else
@@ -101,5 +119,6 @@ for i=1:size(xs)
 end
 xs(del_list)=[];
 ys(del_list)=[];
+zs(del_list)=[];
 quality(del_list)=[];
 end

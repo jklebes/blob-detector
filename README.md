@@ -40,7 +40,9 @@ Simple utility to inspect output, adds magenta circles to the image.
 
 ```image_out=annotate_image(image, coords, diameters)```
 
-This returns an RGB array.  Alternatively, for immediate display as a figure, you could use matlab's ``viscircles``.
+This returns an RGB array - the image with magenta circles added - which can then
+be inspected using imshow.
+Alternatively, for immediate display as a figure, you could use matlab's ``viscircles``.
 
 
 
