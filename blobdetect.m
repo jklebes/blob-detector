@@ -11,12 +11,11 @@ addRequired(p,'diameter', @(x) isempty(x)||(isnumeric(x)&&0<x));
 addParameter(p,'Filter', "LoG", @(x) any(validatestring(x,{'LoG', 'DoG'})) );
 addParameter(p,'DarkBackground', true, @(x)islogical(x));
 addParameter(p,'MedianFilter', true, @(x)islogical(x));
+addParameter(p,'OverlapFilter', true, @(x)islogical(x));
 addParameter(p,'KernelSize', 9, @(x)isnumeric(x)&&x>=1);
 addParameter(p,'OverlapFilter', true, @(x)islogical(x));
 addParameter(p,'IntensityFilter', true, @(x)islogical(x));
 addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0);
-
-imhmax_height=10;
 
 parse(p, image, diameter, varargin{:})
 
@@ -55,7 +54,10 @@ switch p.Results.Filter
         image_conv = image_conv_2 - image_conv_1 ;
 end
 %detect local maxima
-maxima = imregionalmax(imhmax(image_conv, imhmax_height));
+%alternative taken from scipy: apply maximum filter (=imdilate). 
+% take points where original image == filtered image to be maxima
+SE=strel('square',4); 
+maxima = image_conv==imdilate(image_conv,SE);
 
 %handle edge
 maxima(BorderWidth:end-BorderWidth,:)=0;
@@ -68,6 +70,13 @@ maxima(:,BorderWidth:end-BorderWidth)=0;
 quality = zeros([size(xs),1]);
 for i=1:size(xs)
     quality(i)=image_conv(xs(i),ys(i));
+end
+
+if ~isempty(p.Results.QualityFilter)
+    q_min=p.Results.QualityFilter;
+    xs=xs(quality>q_min);
+    ys=ys(quality>q_min);
+    quality=quality(quality>q_min);
 end
 
 if p.Results.OverlapFilter

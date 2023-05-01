@@ -1,8 +1,19 @@
-function image_out=annotate_image(image, blob_coords, diameters)
+function image_out=annotate_image(image, blob_coords, diameters, z)
 %draws magenta circles on the image
 im_double = cast(imadjust(image), 'double')/255;
-if size(diameters)==1
+if size(blob_coords, 2)==2 && size(diameters)==1 %2D
     diameters=repmat(diameters, [size(blob_coords),1]);
+elseif size(blob_coords, 2)==3 %3D
+    d=diameters;
+    diameters = zeros([1, size(blob_coords,1)]);
+    for i =1:size(blob_coords,1)
+    dist = abs(z-blob_coords(i,3)) ;
+    if dist>d/2
+        diameters(i)=0;
+    else
+        diameters(i)=round(sqrt(d^2-dist^2));
+    end
+    end
 end
 circles = cast(circles_mask(size(image), blob_coords, diameters), 'double');
 color = [1,0,1] ; %magenta
@@ -17,6 +28,7 @@ function mask = circles_mask(dims, centers, diameters)
 % at 'centers' and diamters 'diameters'
 mask=zeros(dims);
 for i=1:size(centers)
+    if diameters(i)>0
 rad=(diameters(i)/2);
 rad_low = (rad)^2;
 rad_high=(rad+1)^2; %outline thickness of 1
@@ -25,5 +37,6 @@ cx=centers(i,1);
 cy=centers(i,2);
 d=(x-cx).^2+(y-cy).^2;
 mask = mask | (d < rad_high & d>= rad_low);
+    end
 end 
 end
