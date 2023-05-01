@@ -12,6 +12,7 @@ addParameter(p,'DarkBackground', true, @(x)islogical(x));
 addParameter(p,'MedianFilter', true, @(x)islogical(x));
 addParameter(p,'KernelSize', 9, @(x)isnumeric(x)&&x>=1);
 addParameter(p,'OverlapFilter', true, @(x)islogical(x));
+addParameter(p,'QualityFilter', 0.1, @(x)isnumeric(x)&&x>=0 &&x<=1);
 addParameter(p,'IntensityFilter', true, @(x)islogical(x));
 addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0); 
 imhmax_height=10;
@@ -42,7 +43,7 @@ kernel=LoG_kernel_3D(sigma_, p.Results.KernelSize);
 image_conv = convn(image, kernel, 'same');
 
 %detect local maxima
-maxima = imregionalmax(imhmax(image_conv, 2));
+maxima = imregionalmax(imgaussfilt(imhmax(image_conv, .02),2));
 
 %handle edges
 maxima([1:BorderWidth end-BorderWidth:end],:,:)=0;
@@ -64,10 +65,18 @@ for i=1:size(xs)
 end
 quality=rescale(quality);
 
+if ~isempty(p.Results.QualityFilter)
+    q_min=p.Results.QualityFilter;
+    xs=xs(quality>q_min);
+    ys=ys(quality>q_min);
+    zs=zs(quality>q_min);
+    quality=quality(quality>q_min);
+end
 %3D version of overlap filter
 if p.Results.OverlapFilter
     [xs,ys, zs, quality] = overlap_filter3D(xs,ys,zs,quality,diameter);
 end
+
     blobs = [xs,ys,zs, quality];
 end
 
