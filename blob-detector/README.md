@@ -27,6 +27,8 @@ image instead shows dark objects on light background set this to ```false```.  D
 
 ```MedianFilter``` The median filter prepocessing step improves quality, default ```true```.
 
+```QualityFilter``` Filter by (linearly rescaled) instensity, default ```0.1```.
+
 ```OverlapFilter``` Eliminate circles overlapping by more than radius.  default ```true```.
 
 ```KernelSize``` Size of LoG kernel matrix (gets rounded up to nearest odd number).  Default ```9```.
@@ -47,5 +49,4 @@ Alternatively, for immediate display as a figure, you could use matlab's ``visci
 
 
 # Not yet implemented
-* handle image edges
 * automatically adjust kernel size
