@@ -43,9 +43,12 @@ kernel=LoG_kernel_3D(sigma_, p.Results.KernelSize);
 image_conv = convn(image, kernel, 'same');
 
 %detect local maxima
-maxima = imregionalmax(imgaussfilt(imhmax(image_conv, .02),2));
+%alternative taken from scipy: apply maximum filter (=imdilate). 
+% take points where original image == filtered image to be maxima
+SE=strel('cube',4); %squares should be more separable -faster?
+maxima = image_conv==imdilate(image_conv,SE);
 
-%handle edges
+%handle edges, erase maxima near edge
 maxima([1:BorderWidth end-BorderWidth:end],:,:)=0;
 maxima(:,[1:BorderWidth end-BorderWidth:end],:)=0;
 try
