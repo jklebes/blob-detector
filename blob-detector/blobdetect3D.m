@@ -52,7 +52,10 @@ end
 kernel=LoG_kernel_3D(sigma_, kernelSize);
 
 %FFTconvolve with the kernel
-image_conv = convn(image, kernel, 'same');
+i=distributed(image);
+spmd
+image_conv = convn(i, kernel, 'same');
+end
 
 %detect local maxima
 %alternative taken from scipy: apply maximum filter (=imdilate). 
