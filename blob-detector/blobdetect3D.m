@@ -10,12 +10,12 @@ addRequired(p,'diameter', @(x) isempty(x)||(isnumeric(x)&&0<x));
 
 addParameter(p,'DarkBackground', true, @(x)islogical(x));
 addParameter(p,'MedianFilter', true, @(x)islogical(x));
-addParameter(p,'KernelSize', 9, @(x)isnumeric(x)&&x>=1);
-addParameter(p,'OverlapFilter', true, @(x)islogical(x));
+addParameter(p,'KernelSize', [], @(x)isnumeric(x)&&x>=1);
+addParameter(p,'OverlapFilter', false, @(x)islogical(x));
 addParameter(p,'QualityFilter', 0.1, @(x)isnumeric(x)&&x>=0 &&x<=1);
 addParameter(p,'IntensityFilter', true, @(x)islogical(x));
 addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0); 
-imhmax_height=10;
+
 parse(p, image, diameter, varargin{:})
 
 if isempty(p.Results.BorderWidth)
@@ -37,7 +37,19 @@ if p.Results.MedianFilter
 end
 %make the LoG kernel
 sigma_ = diameter/(sqrt(3)*2); %sigma = r / sqrt(D) 
-kernel=LoG_kernel_3D(sigma_, p.Results.KernelSize);
+
+if isempty(p.Results.KernelSize)
+    %taken from trackmate DetectionUtils.java createLoGKernel ,
+    %creditted Tobias Gauss
+    halfKernelSize = max(2,ceil(3*sigma_+.5));
+    kernelSize = 3+2*halfKernelSize;
+else
+    %if user input is even, will be effectively rounded up to
+    %nearest odd in use
+    kernelSize = p.Results.KernelSize;
+end
+
+kernel=LoG_kernel_3D(sigma_, kernelSize);
 
 %FFTconvolve with the kernel
 image_conv = convn(image, kernel, 'same');

@@ -11,8 +11,8 @@ addRequired(p,'diameter', @(x) isempty(x)||(isnumeric(x)&&0<x));
 addParameter(p,'Filter', "LoG", @(x) any(validatestring(x,{'LoG', 'DoG'})) );
 addParameter(p,'DarkBackground', true, @(x)islogical(x));
 addParameter(p,'MedianFilter', true, @(x)islogical(x));
-addParameter(p,'OverlapFilter', true, @(x)islogical(x));
-addParameter(p,'KernelSize', 9, @(x)isnumeric(x)&&x>=1);
+addParameter(p,'OverlapFilter', false, @(x)islogical(x));
+addParameter(p,'KernelSize', [], @(x)isnumeric(x)&&x>=1);
 addParameter(p,'OverlapFilter', true, @(x)islogical(x));
 addParameter(p,'IntensityFilter', true, @(x)islogical(x));
 addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0);
@@ -37,8 +37,18 @@ end
 switch p.Results.Filter
     case "LoG"
         %make the LoG kernel
-        sigma_sq = (diameter/(sqrt(2)^3))^2; %sigma = r / sqrt(D)
-        kernel=LoG_kernel(sigma_sq, p.Results.KernelSize);
+        sigma = (diameter/(sqrt(2)^3)); %sigma = r / sqrt(D)
+        if isempty(p.Results.KernelSize)
+            %taken from trackmate DetectionUtils.java createLoGKernel ,
+            %creditted Tobias Gauss
+            halfKernelSize = max(2,ceil(3*sqrt(sigma)+.5));
+            kernelSize = 3+2*halfKernelSize;
+        else
+            %if user input is even, will be effectively rounded up to
+            %nearest odd in use
+            kernelSize = p.Results.KernelSize;
+        end
+        kernel=LoG_kernel(sigma, kernelSize);
         %FFTconvolve with the kernel
         image_conv = conv2(image, kernel, 'same');
     case "DoG"
@@ -46,8 +56,8 @@ switch p.Results.Filter
         sigma_sq_1 = (diameter/(sqrt(2)^3)*0.9)^2;
         %larger DoG sigma^2
         sigma_sq_2 = (diameter/(sqrt(2)^3)*1.1)^2;
-        kernel_1=Gaussian_kernel(sigma_sq_1, p.Results.KernelSize);
-        kernel_2=Gaussian_kernel(sigma_sq_2, p.Results.KernelSize);
+        kernel_1=Gaussian_kernel(sigma_sq_1, kernelSize);
+        kernel_2=Gaussian_kernel(sigma_sq_2, kernelSize);
         %FFTconvolve with each kernel
         image_conv_1 = conv2(image, kernel_1, 'same');
         image_conv_2 = conv2(image, kernel_2, 'same');
@@ -90,16 +100,15 @@ function kernel = Laplacian_kernel()
 kernel= [0,-1,0;-1,4,-1;0,-1,0];
 end
 
-function kernel = LoG_kernel(sigma_sq, kernel_size)
+function kernel = LoG_kernel(sigma, kernel_size)
 %arrays of x, y coordinates distance from center
-%handle odd/even kernel_size - always makes an odd kernel size,
+%handle odd/even kernel_size - always makes it odd kernel size,
 %rounding up
 range=-floor(kernel_size/2):floor(kernel_size/2);
 [x,y] = ndgrid(range,range);
 %LoG kernel formula
-d=(x.^2+y.^2)/(2*sigma_sq);
-kernel= -1/(pi*sigma_sq^2)*(1-d).*exp(-d);
-%TODO should I discretize to ints?
+d=(x.^2+y.^2)/(2*sigma^2);
+kernel= -1/(pi*sigma^4)*(1-d).*exp(-d);
 end
 
 function kernel = Gaussian_kernel(sigma_sq, kernel_size)
