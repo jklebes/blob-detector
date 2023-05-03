@@ -52,10 +52,8 @@ end
 kernel=LoG_kernel_3D(sigma_, kernelSize);
 
 %FFTconvolve with the kernel
-i=distributed(image);
-spmd
-image_conv = convn(i, kernel, 'same');
-end
+image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
+image_conv = gather(image_conv); %because gpu-imdilate is limited to 2D uint8
 
 %detect local maxima
 %alternative taken from scipy: apply maximum filter (=imdilate). 
