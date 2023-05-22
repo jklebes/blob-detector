@@ -62,6 +62,9 @@ extern "C" void padDataClampToBorder(float *d_PaddedData, float *d_Data,
                                      int kernelD, int kernelH, int kernelW, int kernelZ, int kernelY,
                                      int kernelX);
 
+extern "C" void unpad(float *d_Dst, float *d_Src, 
+                       int fftD, int fftH, int fftW, int dataD, int dataH, int dataW );
+
 extern "C" void modulateAndNormalize(fComplex *d_Dst, fComplex *d_Src, int fftD, int fftH,
                                      int fftW, int padding);
 
