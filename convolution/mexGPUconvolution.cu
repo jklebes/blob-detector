@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "convolutionFFT3D_common.h"
+#include "convolutionFFT2D_common.h"
 
 #define USE_TEXTURE 1
 #define POWER_OF_TWO 1
@@ -34,8 +34,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// Position convolution kernel center at (0, 0) in the image
 ////////////////////////////////////////////////////////////////////////////////
-__global__ void padKernel_kernel(float *d_Dst, float *d_Src, int fftD, int fftH, int fftW,
-                                 int kernelD, int kernelH, int kernelW, int kernelZ, int kernelY,
+__global__ void padKernel_kernel(float *d_Dst, float *d_Src, int fftH, int fftW,
+                                 int kernelH, int kernelW, int kernelY,
                                  int kernelX
 #if (USE_TEXTURE)
                                  ,
@@ -43,16 +43,10 @@ __global__ void padKernel_kernel(float *d_Dst, float *d_Src, int fftD, int fftH,
 #endif
                                  ) {
 
-  const int z = blockDim.z * blockIdx.z + threadIdx.z;
   const int y = blockDim.y * blockIdx.y + threadIdx.y;
   const int x = blockDim.x * blockIdx.x + threadIdx.x;
 
-  if (z < kernelD && y < kernelH && x < kernelW) {
-    int kz = z - kernelZ;
-
-      if (kz < 0) {
-          kz += fftD;
-      }
+  if ( y < kernelH && x < kernelW) {
 
     int ky = y - kernelY;
 
@@ -66,35 +60,46 @@ __global__ void padKernel_kernel(float *d_Dst, float *d_Src, int fftD, int fftH,
       kx += fftW;
     }
 
-    d_Dst[kz* fftH *fftW + ky * fftW + kx] = LOAD_FLOAT(z* kernelH * kernelW + y * kernelW + x);
+    d_Dst[ ky * fftW + kx] = LOAD_FLOAT(y * kernelW + x);
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Prepare data for "pad to border" addressing mode
 ////////////////////////////////////////////////////////////////////////////////
-__global__ void padDataClampToBorder_kernel(float *d_Dst, float *d_Src,
-                                            int fftD, int fftH, int fftW, int dataD, int dataH,
-                                            int dataW, int kernelD, int kernelH, int kernelW,
-                                            int kernelZ, int kernelY, int kernelX
+__global__ void unpad_kernel(float *d_Dst, float *d_Src,
+                                             int fftH, int fftW, int dataH,
+                                            int dataW
 #if (USE_TEXTURE)
                                             ,
                                             cudaTextureObject_t texFloat
 #endif
                                             ) {
-  const int z = blockDim.z * blockIdx.z + threadIdx.z;
   const int y = blockDim.y * blockIdx.y + threadIdx.y;
   const int x = blockDim.x * blockIdx.x + threadIdx.x;
-  const int borderD = dataD + kernelZ;
+
+  if (y < dataH && x < dataW) {
+
+    d_Dst[y * dataW + x] = LOAD_FLOAT(y * fftW + x);
+  }
+}
+
+__global__ void padDataClampToBorder_kernel(float *d_Dst, float *d_Src,
+                                             int fftH, int fftW, int dataH,
+                                            int dataW,  int kernelH, int kernelW,
+                                            int kernelY, int kernelX
+#if (USE_TEXTURE)
+                                            ,
+                                            cudaTextureObject_t texFloat
+#endif
+                                            ) {
+  const int y = blockDim.y * blockIdx.y + threadIdx.y;
+  const int x = blockDim.x * blockIdx.x + threadIdx.x;
   const int borderH = dataH + kernelY;
   const int borderW = dataW + kernelX;
 
-  if (z < fftD && y < fftH && x < fftW) {
-    int dz, dy, dx;
-
-    if (z < dataD) {
-        dz = z;
-    }
+  if (y < fftH && x < fftW) {
+    int  dy, dx;
 
     if (y < dataH) {
       dy = y;
@@ -102,10 +107,6 @@ __global__ void padDataClampToBorder_kernel(float *d_Dst, float *d_Src,
 
     if (x < dataW) {
       dx = x;
-    }
-
-    if (z >= dataD && z < borderD) {
-        dz = dataD - 1;
     }
 
     if (y >= dataH && y < borderH) {
@@ -116,10 +117,6 @@ __global__ void padDataClampToBorder_kernel(float *d_Dst, float *d_Src,
       dx = dataW - 1;
     }
 
-    if (z >= borderD) {
-        dz = 0;
-    }
-
     if (y >= borderH) {
       dy = 0;
     }
@@ -128,7 +125,7 @@ __global__ void padDataClampToBorder_kernel(float *d_Dst, float *d_Src,
       dx = 0;
     }
 
-    d_Dst[z* fftH * fftW + y * fftW + x] = LOAD_FLOAT(dz * dataH * dataW + dy * dataW + dx);
+    d_Dst[y * fftW + x] = LOAD_FLOAT(dy * dataW + dx);
   }
 }
 
@@ -163,11 +160,11 @@ __global__ void modulateAndNormalize_kernel(fComplex *d_Dst, fComplex *d_Src,
 ////////////////////////////////////////////////////////////////////////////////
 /// Position convolution kernel center at (0, 0) in the image
 ////////////////////////////////////////////////////////////////////////////////
-extern "C" void padKernel(float *d_Dst, float *d_Src, int fftD, int fftH, int fftW,
-                          int kernelD, int kernelH, int kernelW, int kernelZ, int kernelY, int kernelX) {
+extern "C" void padKernel(float *d_Dst, float *d_Src, int fftH, int fftW,
+                           int kernelH, int kernelW, int kernelY, int kernelX) {
   assert(d_Src != d_Dst);
-  dim3 threads(8, 8, 4);
-  dim3 grid(iDivUp(kernelW, threads.x), iDivUp(kernelH, threads.y), iDivUp(kernelD, threads.z));
+  dim3 threads( 8, 4);
+  dim3 grid(iDivUp(kernelW, threads.x), iDivUp(kernelH, threads.y));
 
   SET_FLOAT_BASE;
 #if (USE_TEXTURE)
@@ -177,7 +174,7 @@ extern "C" void padKernel(float *d_Dst, float *d_Src, int fftD, int fftH, int ff
 
   texRes.resType = cudaResourceTypeLinear;
   texRes.res.linear.devPtr = d_Src;
-  texRes.res.linear.sizeInBytes = sizeof(float) * kernelH * kernelW * kernelD;
+  texRes.res.linear.sizeInBytes = sizeof(float) * kernelH * kernelW ;
   texRes.res.linear.desc = cudaCreateChannelDesc<float>();
 
   cudaTextureDesc texDescr;
@@ -191,8 +188,8 @@ extern "C" void padKernel(float *d_Dst, float *d_Src, int fftD, int fftH, int ff
   cudaCreateTextureObject(&texFloat, &texRes, &texDescr, NULL);
 #endif
 
-  padKernel_kernel<<<grid, threads>>>(d_Dst, d_Src, fftD, fftH, fftW, kernelD,
-                                      kernelH, kernelW, kernelZ, kernelY, kernelX
+  padKernel_kernel<<<grid, threads>>>(d_Dst, d_Src, fftH, fftW, 
+                                      kernelH, kernelW, kernelY, kernelX
 #if (USE_TEXTURE)
                                       ,
                                       texFloat
@@ -207,13 +204,13 @@ extern "C" void padKernel(float *d_Dst, float *d_Src, int fftD, int fftH, int ff
 ////////////////////////////////////////////////////////////////////////////////
 // Prepare data for "pad to border" addressing mode
 ////////////////////////////////////////////////////////////////////////////////
-extern "C" void padDataClampToBorder(float *d_Dst, float *d_Src, int fftD,
-                                     int fftH, int fftW, int dataD, int dataH, int dataW,
-                                     int kernelD, int kernelH, int kernelW, int kernelZ,
+extern "C" void padDataClampToBorder(float *d_Dst, float *d_Src, 
+                                     int fftH, int fftW, int dataH, int dataW,
+                                     int kernelH, int kernelW,
                                      int kernelY, int kernelX) {
   assert(d_Src != d_Dst);
-  dim3 threads(8, 8, 4);
-  dim3 grid(iDivUp(fftW, threads.x), iDivUp(fftH, threads.y), iDivUp(fftD, threads.z));
+  dim3 threads(8, 8);
+  dim3 grid(iDivUp(fftW, threads.x), iDivUp(fftH, threads.y));
 
 #if (USE_TEXTURE)
   cudaTextureObject_t texFloat;
@@ -222,7 +219,7 @@ extern "C" void padDataClampToBorder(float *d_Dst, float *d_Src, int fftD,
 
   texRes.resType = cudaResourceTypeLinear;
   texRes.res.linear.devPtr = d_Src;
-  texRes.res.linear.sizeInBytes = sizeof(float) * dataH * dataW * dataD;
+  texRes.res.linear.sizeInBytes = sizeof(float) * dataH * dataW ;
   texRes.res.linear.desc = cudaCreateChannelDesc<float>();
 
   cudaTextureDesc texDescr;
@@ -237,7 +234,48 @@ extern "C" void padDataClampToBorder(float *d_Dst, float *d_Src, int fftD,
 #endif
 
   padDataClampToBorder_kernel<<<grid, threads>>>(
-      d_Dst, d_Src, fftD, fftH, fftW, dataD, dataH, dataW, kernelD, kernelH, kernelW, kernelZ, kernelY, kernelX
+      d_Dst, d_Src,  fftH, fftW,  dataH, dataW,  kernelH, kernelW, kernelY, kernelX
+#if (USE_TEXTURE)
+      ,
+      texFloat
+#endif
+      );
+
+#if (USE_TEXTURE)
+  cudaDestroyTextureObject(texFloat);
+#endif
+}
+
+
+extern "C" void unpad(float *d_Dst, float *d_Src, 
+                                     int fftH, int fftW, int dataH, int dataW ) {
+  assert(d_Src != d_Dst);
+  dim3 threads(8, 8);
+  dim3 grid(iDivUp(fftW, threads.x), iDivUp(fftH, threads.y));
+
+#if (USE_TEXTURE)
+  cudaTextureObject_t texFloat;
+  cudaResourceDesc texRes;
+  memset(&texRes, 0, sizeof(cudaResourceDesc));
+
+  texRes.resType = cudaResourceTypeLinear;
+  texRes.res.linear.devPtr = d_Src;
+  texRes.res.linear.sizeInBytes = sizeof(float) * fftH * fftW ;
+  texRes.res.linear.desc = cudaCreateChannelDesc<float>();
+
+  cudaTextureDesc texDescr;
+  memset(&texDescr, 0, sizeof(cudaTextureDesc));
+
+  texDescr.normalizedCoords = false;
+  texDescr.filterMode = cudaFilterModeLinear;
+  texDescr.addressMode[0] = cudaAddressModeWrap;
+  texDescr.readMode = cudaReadModeElementType;
+
+  cudaCreateTextureObject(&texFloat, &texRes, &texDescr, NULL);
+#endif
+
+  unpad_kernel<<<grid, threads>>>(
+      d_Dst, d_Src,  fftH, fftW,  dataH, dataW
 #if (USE_TEXTURE)
       ,
       texFloat
@@ -253,30 +291,16 @@ extern "C" void padDataClampToBorder(float *d_Dst, float *d_Src, int fftD,
 // Modulate Fourier image of padded data by Fourier image of padded kernel
 // and normalize by FFT size
 ////////////////////////////////////////////////////////////////////////////////
-extern "C" void modulateAndNormalize(fComplex *d_Dst, fComplex *d_Src, int fftD,
+extern "C" void modulateAndNormalize(fComplex *d_Dst, fComplex *d_Src, 
                                      int fftH, int fftW, int padding) {
   assert(fftW % 2 == 0);
-  const int dataSize = fftD * fftH *(fftW / 2 + padding);
+  const int dataSize =  fftH *(fftW / 2 + padding);
   
   modulateAndNormalize_kernel<<<iDivUp(dataSize, 256), 256 >>>(
-      d_Dst, d_Src, dataSize, 1.0f / (float)(fftW * fftH * fftD));
+      d_Dst, d_Src, dataSize, 1.0f / (float)(fftW * fftH));
 }
 
 
-/*
- * Device code
- */
-void __global__ VectorAdd(float * const data,
-                          float * const kernel,
-                         float * const dataOut,
-                         int const N)
-{
-    /* Calculate the global linear index, assuming a 1-d grid. */
-    int const i = blockDim.x * blockIdx.x + threadIdx.x;
-    if (i < N) {
-        dataOut[i] = kernel[i]+ data[i] + 0.0f;
-    }
-}
 
 /*
  * Host code
@@ -317,7 +341,6 @@ void mexFunction(int nlhs, mxArray *plhs[],
     mxGPUArray const *kernel;
     //detect dimensions of data
 
-    mxGPUArray *dataOut_c;
     float *d_Data;
     float *d_Kernel;
     mxGPUArray *PaddedData_c;
@@ -328,7 +351,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     fComplex* d_DataSpectrum, * d_KernelSpectrum;
     cufftHandle fftPlanFwd, fftPlanInv;
     float *d_dataOut;
-    int N;
+    mxGPUArray *dataOut_c;
     char const * const errId = "parallel:gpu:mexGPUExample:InvalidInput";
     char const * const errMsg = "Invalid input to MEX file.  Must be matlab single type.";
     char const * const errMsg3D = "Invalid input to MEX file.  3D arrays expected.";
@@ -352,7 +375,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     if ((mxGPUGetClassID(data) != mxSINGLE_CLASS)||(mxGPUGetClassID(kernel) != mxSINGLE_CLASS)) { //goes with float
         mexErrMsgIdAndTxt(errId, errMsg);
     }
-    if ((mxGPUGetNumberOfDimensions(data) != 3)||(mxGPUGetNumberOfDimensions(kernel) != 3) ) { 
+    if ((mxGPUGetNumberOfDimensions(data) != 2)||(mxGPUGetNumberOfDimensions(kernel) != 2) ) { 
         mexErrMsgIdAndTxt(errId, errMsg3D);
     }
 
@@ -361,19 +384,15 @@ void mexFunction(int nlhs, mxArray *plhs[],
     mwSize const * const dimsData = mxGPUGetDimensions(data);
     mwSize const dataW = dimsData[0]; //I want W to be innermost dimension
     mwSize const dataH = dimsData[1];
-    mwSize const dataD = dimsData[2];
     mwSize const * const dimsKernel = mxGPUGetDimensions(kernel);
     mwSize const kernelW = dimsKernel[0]; 
     mwSize const kernelH = dimsKernel[1];
-    mwSize const kernelD = dimsKernel[2];
     mwSize const kernelX = 5; 
     mwSize const kernelY = 5;
-    mwSize const kernelZ = 5;
     unsigned int const fftW = snapTransformSize(dataW + kernelW - 1);
     unsigned int const fftH = snapTransformSize(dataH + kernelH - 1);
-    unsigned int const fftD = snapTransformSize(dataD + kernelD - 1);
-    mwSize const dimsFft[3] = {fftW, fftH, fftD};
-    mwSize const dimsComplex[3] = {fftW/2+1, fftH, fftD};
+    mwSize const dimsFft[2] = {fftW, fftH};
+    mwSize const dimsComplex[2] = { fftW/2+1 , fftH};
 
     /*
      * Now that we have verified the data type, extract a pointer to the input
@@ -382,74 +401,78 @@ void mexFunction(int nlhs, mxArray *plhs[],
     d_Data = (float *)(mxGPUGetDataReadOnly(data));
     d_Kernel = (float *)(mxGPUGetDataReadOnly(kernel));
     /* Create GPUArray on device only. */
-    PaddedData_c = mxGPUCreateGPUArray(3,
+    PaddedData_c = mxGPUCreateGPUArray(2,
                             dimsFft,
                             mxGPUGetClassID(data),
                             mxGPUGetComplexity(data),
-                            MX_GPU_DO_NOT_INITIALIZE);
+                            MX_GPU_INITIALIZE_VALUES);
     d_PaddedData = (float *)(mxGPUGetData(PaddedData_c));
-    PaddedKernel_c = mxGPUCreateGPUArray(3,
+    PaddedKernel_c = mxGPUCreateGPUArray(2,
                             dimsFft,
                             mxGPUGetClassID(kernel),
                             mxGPUGetComplexity(kernel),
                             MX_GPU_INITIALIZE_VALUES);
     d_PaddedKernel = (float *)(mxGPUGetData(PaddedKernel_c));
     //fourier space complex arrays
-    KernelSpectrum_c = mxGPUCreateGPUArray(3,
+    KernelSpectrum_c = mxGPUCreateGPUArray(2,
                             dimsComplex,
                             mxGPUGetClassID(data), 
                             mxCOMPLEX, 
-                            MX_GPU_DO_NOT_INITIALIZE);
-    DataSpectrum_c = mxGPUCreateGPUArray(3,
+                            MX_GPU_INITIALIZE_VALUES);
+    DataSpectrum_c = mxGPUCreateGPUArray(2,
                             dimsComplex,
                             mxGPUGetClassID(data),
                             mxCOMPLEX,
-                            MX_GPU_DO_NOT_INITIALIZE);
+                            MX_GPU_INITIALIZE_VALUES);
     d_KernelSpectrum = (fComplex *)(mxGPUGetData(KernelSpectrum_c));
     d_DataSpectrum = (fComplex *)(mxGPUGetData(DataSpectrum_c));
-    //output
-    dataOut_c = mxGPUCreateGPUArray(3,
-                            dimsFft,
+    dataOut_c = mxGPUCreateGPUArray(2,
+                            dimsData,
                             mxGPUGetClassID(data),
                             mxGPUGetComplexity(data),
                             MX_GPU_DO_NOT_INITIALIZE);
     d_dataOut = (float *)(mxGPUGetData(dataOut_c));
+    
 
-    /*
-     * Call the kernel using the CUDA runtime API. We are using a 1-d grid here,
-     * and it would be possible for the number of elements to be too large for
-     * the grid. For this example we are not guarding against this possibility.
-     */
 
     //pad data and kernel
-    padKernel(d_PaddedKernel, d_Kernel, fftD, fftH, fftW, kernelD, kernelH, kernelW, kernelZ, kernelY,
+    padKernel(d_PaddedKernel, d_Kernel, fftH, fftW, kernelH, kernelW, kernelY,
         kernelX);
-    padDataClampToBorder(d_PaddedData, d_Data, fftD, fftH, fftW, dataD, dataH, dataW, kernelD,
-        kernelH, kernelW, kernelZ, kernelY, kernelX);
+    padDataClampToBorder(d_PaddedData, d_Data, fftH, fftW, dataH, dataW,
+        kernelH, kernelW, kernelY, kernelX);
 
     //Fourier transform
-    cufftPlan3d(&fftPlanFwd, fftW, fftH, fftD, CUFFT_R2C);
-    cufftPlan3d(&fftPlanInv, fftW, fftH, fftD, CUFFT_C2R);
+    cufftPlan2d(&fftPlanFwd, fftH, fftW, CUFFT_R2C);
+    cufftPlan2d(&fftPlanInv, fftH, fftW, CUFFT_C2R);
     cufftExecR2C(fftPlanFwd, (cufftReal*)d_PaddedKernel,
         (cufftComplex*)d_KernelSpectrum);
     cufftExecR2C(fftPlanFwd, (cufftReal*)d_PaddedData,
         (cufftComplex*)d_DataSpectrum);
 
     // multiply elementwise in fourier space + normalize
-    modulateAndNormalize(d_DataSpectrum, d_KernelSpectrum, fftD, fftH, fftW, 1);
+    modulateAndNormalize((fComplex*)d_DataSpectrum, (fComplex*)d_KernelSpectrum,  fftH, fftW, 1);
 
     //inverse Fourier transform
     cufftExecC2R(fftPlanInv, (cufftComplex*)d_DataSpectrum,
-        (cufftReal*)d_dataOut);
+        (cufftReal*)d_PaddedData);
 
-    //unpad result on CPU
+    //unpad result
+
+    unpad(d_dataOut, d_PaddedData, fftH, fftW,dataH, dataW);
 
     /* Wrap the result up as a MATLAB gpuArray for return. */
-    plhs[0] = mxGPUCreateMxArrayOnGPU(kernel);
-    plhs[1] = mxGPUCreateMxArrayOnGPU(data);
-    plhs[2] = mxGPUCreateMxArrayOnGPU(PaddedKernel_c);
-    plhs[3] = mxGPUCreateMxArrayOnGPU(PaddedData_c);
-    plhs[4] = mxGPUCreateMxArrayOnGPU(dataOut_c);
+//     plhs[0] = mxGPUCreateMxArrayOnGPU(kernel);
+//     plhs[1] = mxGPUCreateMxArrayOnGPU(data);
+//     mxGPUArray * fftkernel = mxGPUCopyReal(KernelSpectrum_c);
+//     plhs[2] = mxGPUCreateMxArrayOnGPU(fftkernel);
+//     mxGPUArray * fftkernel_i = mxGPUCopyImag(KernelSpectrum_c);
+//     plhs[3] = mxGPUCreateMxArrayOnGPU(fftkernel_i);
+//     mxGPUArray * fftconvolved = mxGPUCopyReal(DataSpectrum_c);
+//     plhs[4] = mxGPUCreateMxArrayOnGPU(fftconvolved);
+//     mxGPUArray * fftconvolved_i = mxGPUCopyImag(DataSpectrum_c);
+//     plhs[5] = mxGPUCreateMxArrayOnGPU(fftconvolved_i);
+//     plhs[6] = mxGPUCreateMxArrayOnGPU(PaddedKernel_c);
+    plhs[0] = mxGPUCreateMxArrayOnGPU(dataOut_c);
 
     /*
      * The mxGPUArray pointers are host-side structures that refer to device
@@ -464,5 +487,4 @@ void mexFunction(int nlhs, mxArray *plhs[],
     mxGPUDestroyGPUArray(PaddedData_c);
     mxGPUDestroyGPUArray(KernelSpectrum_c);
     mxGPUDestroyGPUArray(DataSpectrum_c);
-    mxGPUDestroyGPUArray(dataOut_c);
 }

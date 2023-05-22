@@ -1,5 +1,14 @@
 *.asv
+
 *.png
 *.fig
 *.jpeg
 *.tif
+
+*.mlx
+
+*.sln
+*.vcxproj*
+.vs/
+
+convolution/

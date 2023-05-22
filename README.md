@@ -49,5 +49,5 @@ Alternatively, for immediate display as a figure, you could use matlab's ``visci
 
 
 # Not yet implemented
-* automatically adjust kernel size
+
 * improve OverlapFilter speed
