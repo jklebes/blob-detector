@@ -12,10 +12,11 @@ addParameter(p,'Filter', "LoG", @(x) any(validatestring(x,{'LoG', 'DoG'})) );
 addParameter(p,'DarkBackground', true, @(x)islogical(x));
 addParameter(p,'MedianFilter', true, @(x)islogical(x));
 addParameter(p,'OverlapFilter', false, @(x)islogical(x));
+addParameter(p,'QualityFilter', 0.1, @(x)isnumeric(x)&&x>=0 &&x<=1);
 addParameter(p,'KernelSize', [], @(x)isnumeric(x)&&x>=1);
-addParameter(p,'OverlapFilter', true, @(x)islogical(x));
 addParameter(p,'IntensityFilter', true, @(x)islogical(x));
 addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0);
+addParameter(p,'GPU', false, @(x)islogical(x));
 
 parse(p, image, diameter, varargin{:})
 
@@ -49,8 +50,19 @@ switch p.Results.Filter
             kernelSize = p.Results.KernelSize;
         end
         kernel=LoG_kernel(sigma, kernelSize);
-        %FFTconvolve with the kernel
-        image_conv = conv2(image, kernel, 'same');
+        %convolve with the kernel
+        if p.Results.GPU
+        try
+            image_conv = CUDAconvolution(image, kernel);
+        catch
+            disp("Falling back to matlab pieced convolution")
+            image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
+            image_conv = gather(image_conv);
+        end
+        else
+             image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
+             image_conv = gather(image_conv);
+        end
     case "DoG"
         %smaller DoG sigma^2
         sigma_sq_1 = (diameter/(sqrt(2)^3)*0.9)^2;
@@ -63,8 +75,8 @@ switch p.Results.Filter
         image_conv_2 = conv2(image, kernel_2, 'same');
         image_conv = image_conv_2 - image_conv_1 ;
 end
-%detect local maxima
-%alternative taken from scipy: apply maximum filter (=imdilate). 
+% detect local maxima
+% method taken from scipy: apply maximum filter (=imdilate). 
 % take points where original image == filtered image to be maxima
 SE=strel('square',4); 
 maxima = image_conv==imdilate(image_conv,SE);
@@ -92,7 +104,9 @@ end
 if p.Results.OverlapFilter
     [xs,ys, quality] = overlap_filter(xs,ys,quality,diameter);
 end
-blobs = [xs,ys];
+blobs = [xs,ys,quality];
+blobs = array2table(blobs,...
+    VariableNames={'x','y','Intensity'});
 end
 
 function kernel = Laplacian_kernel()
