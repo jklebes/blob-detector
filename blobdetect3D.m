@@ -1,20 +1,20 @@
 function blobs = blobdetect3D(image, diameter,varargin)
-%BLOBDETECT Find locations of dark/bright features.
+%BLOBDETECT3D Find locations of dark/bright features.
 %
 
 %argparse
 p = inputParser;
 
-addRequired(p,'image',@(x) isnumeric(x));
+addRequired(p,'image',@(x) isnumeric(x)&&ndims(x)==3);
 addRequired(p,'diameter', @(x) isempty(x)||(isnumeric(x)&&0<x));
-
+addParameter(p,'Filter', 'LoG', @(x)ischar(x));
 addParameter(p,'DarkBackground', true, @(x)islogical(x));
 addParameter(p,'MedianFilter', true, @(x)islogical(x));
 addParameter(p,'KernelSize', [], @(x)isnumeric(x)&&x>=1);
 addParameter(p,'OverlapFilter', false, @(x)islogical(x));
 addParameter(p,'QualityFilter', 0.1, @(x)isnumeric(x)&&x>=0 &&x<=1);
-addParameter(p,'IntensityFilter', true, @(x)islogical(x));
 addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0); 
+addParameter(p,'GPU', false, @(x)islogical(x));
 
 parse(p, image, diameter, varargin{:})
 
@@ -49,14 +49,38 @@ else
     kernelSize = p.Results.KernelSize;
 end
 
+%check on GPU
+if p.Results.GPU
+    if gpuDeviceCount==0
+        warning("No GPU devices found.  Running as 'GPU=false'");
+        p.Results.GPU =false;
+    end
+end
+
 kernel=LoG_kernel_3D(sigma_, kernelSize);
 
-%FFTconvolve with the kernel
-image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
-image_conv = gather(image_conv); %because gpu-imdilate is limited to 2D uint8
+%convolve with the kernel
+if p.Results.GPU
+try
+    image_conv = CUDAconvolution3D(image, kernel);
+catch e
+    disp(e.message);
+    disp("CUDAconvolution3D not found or not working, " + ...
+        "Falling back to matlab pieced convolution");
+        image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
+        image_conv = gather(image_conv);
+end
+else 
+    try
+        image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
+        image_conv = gather(image_conv);
+    catch
+        image_conv = convn(image, kernel, 'same');
+     end
+end
 
 %detect local maxima
-%alternative taken from scipy: apply maximum filter (=imdilate). 
+%alternative taken from scipy: apply maximum filter (=imdilate).
 % take points where original image == filtered image to be maxima
 SE=strel('cube',4); %squares should be more separable -faster?
 maxima = image_conv==imdilate(image_conv,SE);
@@ -94,6 +118,13 @@ if p.Results.OverlapFilter
 end
 
     blobs = [xs,ys,zs, quality];
+    if ~isempty(blobs)
+    blobs = array2table(blobs,...
+    VariableNames={'x','y','z','Intensity'});
+    else
+        %return empty table
+        blobs= table('Size',[0,4],'VariableTypes',{'double','double','double','double'},'VariableNames',{'x','y','z','Intensity'});
+    end
 end
 
 function [xs, ys, zs] = find3D(array)

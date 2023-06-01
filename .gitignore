@@ -5,10 +5,11 @@
 *.jpeg
 *.tif
 
-*.mlx
 
 *.sln
 *.vcxproj*
 .vs/
 
 convolution/
+DIF*
+*.mexw64
