@@ -7,7 +7,7 @@ now plus 3D version.
 See pdf for more background.
 
 ## blobdetect
-Function to detects positions of bright/dark features in 2D images.
+Function to detects positions of bright/dark features in 2D and 3D images.
 
 Usage 
 
