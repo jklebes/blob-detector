@@ -2,7 +2,7 @@
 Blob detection by LoG filter. Detects features in 2D, 3D images. [![View blob-detector on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://uk.mathworks.com/matlabcentral/fileexchange/123905-blob-detector)
 
 Suitable for objects with user-estimated uniform diameter.
-now plus DoG option.
+now plus 3D version.
 
 See pdf for more background.
 
