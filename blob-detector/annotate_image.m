@@ -1,9 +1,10 @@
-function image_out=annotate_image(image, blob_coords, diameters, z)
+function image_out=annotate_image(image, blob_coords, diameters, varargin)
 %draws magenta circles on the image
-if size(blob_coords, 2)==3 && size(diameters)==1 %2D
+if size(blob_coords, 2)==3 && all(size(diameters)==1) %2D
     im_double = cast(imadjust(image), 'double')/255;
     diameters=repmat(diameters, [size(blob_coords),1]);
 elseif size(blob_coords, 2)==4 %3D
+    z=varargin{1};
     im_double = cast(imadjust(image(:,:,z)), 'double')/255;
     d=diameters;
     diameters = zeros([1, size(blob_coords,1)]);
