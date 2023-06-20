@@ -82,8 +82,10 @@ SE=strel('square',4);
 maxima = image_conv==imdilate(image_conv,SE);
 
 %handle edge
-maxima(BorderWidth:end-BorderWidth,:)=0;
-maxima(:,BorderWidth:end-BorderWidth)=0;
+maxima(1:BorderWidth,:)=0;
+maxima(end-BorderWidth:end,:)=0;
+maxima(:,end-BorderWidth:end)=0;
+maxima(1:BorderWidth,:)=0;
 
 %return list of coordinates
 [xs,ys]=find(maxima);
