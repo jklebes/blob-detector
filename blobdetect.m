@@ -95,6 +95,7 @@ quality = zeros([size(xs),1]);
 for i=1:size(xs)
     quality(i)=image_conv(xs(i),ys(i));
 end
+quality=rescale(quality);
 
 if ~isempty(p.Results.QualityFilter)
     q_min=p.Results.QualityFilter;
