@@ -16,7 +16,6 @@ addParameter(p,'QualityFilter', 0.1, @(x)isnumeric(x)&&x>=0 &&x<=1);
 addParameter(p,'KernelSize', [], @(x)isnumeric(x)&&x>=1);
 addParameter(p,'IntensityFilter', true, @(x)islogical(x));
 addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0);
-addParameter(p,'GPU', false, @(x)islogical(x));
 
 parse(p, image, diameter, varargin{:})
 
@@ -49,20 +48,11 @@ switch p.Results.Filter
             %nearest odd in use
             kernelSize = p.Results.KernelSize;
         end
+
         kernel=LoG_kernel(sigma, kernelSize);
         %convolve with the kernel
-        if p.Results.GPU
-        try
-            image_conv = CUDAconvolution(image, kernel);
-        catch
-            disp("Falling back to matlab pieced convolution")
-            image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
-            image_conv = gather(image_conv);
-        end
-        else
-             image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
-             image_conv = gather(image_conv);
-        end
+        image_conv = convn(image, kernel, 'same');
+
     case "DoG"
         %smaller DoG sigma^2
         sigma_sq_1 = (diameter/(sqrt(2)^3)*0.9)^2;
@@ -76,9 +66,9 @@ switch p.Results.Filter
         image_conv = image_conv_2 - image_conv_1 ;
 end
 % detect local maxima
-% method taken from scipy: apply maximum filter (=imdilate). 
+% method taken from scipy: apply maximum filter (=imdilate).
 % take points where original image == filtered image to be maxima
-SE=strel('square',4); 
+SE=strel('square',4);
 maxima = image_conv==imdilate(image_conv,SE);
 
 %handle edge
@@ -91,8 +81,8 @@ maxima(:,1:BorderWidth)=0;
 [xs,ys]=find(maxima);
 
 %TODO each maximum is assiged a quality score.  for now just intensity.
-quality = zeros([size(xs),1]);
-for i=1:size(xs)
+quality = zeros([size(xs,1),1]);
+for i=1:size(xs,1)
     quality(i)=image_conv(xs(i),ys(i));
 end
 quality=rescale(quality);
@@ -108,8 +98,6 @@ if p.Results.OverlapFilter
     [xs,ys, quality] = overlap_filter(xs,ys,quality,diameter);
 end
 blobs = [xs,ys,quality];
-blobs = array2table(blobs,...
-    VariableNames={'x','y','Intensity'});
 end
 
 function kernel = Laplacian_kernel()
