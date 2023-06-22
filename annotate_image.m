@@ -9,7 +9,7 @@ elseif size(blob_coords, 2)==4 %3D
     d=diameters;
     diameters = zeros([1, size(blob_coords,1)]);
     for i =1:size(blob_coords,1)
-    dist = abs(z-blob_coords{i,3}) ;
+    dist = abs(z-blob_coords(i,3)) ;
     if dist>d/2
         diameters(i)=0;
     else
@@ -29,16 +29,16 @@ function mask = circles_mask(dims, centers, diameters)
 %an array with 1s in the shape of several hollow circles, with centers
 % at 'centers' and diamters 'diameters'
 mask=zeros(dims);
-for i=1:size(centers)
+for i=1:size(centers,1)
     if diameters(i)>0
 rad=(diameters(i)/2);
 rad_low = (rad)^2;
 rad_high=(rad+1)^2; %outline thickness of 1
 [x,y] = ndgrid(1:dims(1), 1:dims(2));
-cx=centers{i,1};
-cy=centers{i,2};
+cx=centers(i,1);
+cy=centers(i,2);
 d=(x-cx).^2+(y-cy).^2;
 mask = mask | (d < rad_high & d>= rad_low);
     end
-end 
+end
 end

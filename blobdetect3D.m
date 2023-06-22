@@ -9,12 +9,11 @@ addRequired(p,'image',@(x) isnumeric(x)&&ndims(x)==3);
 addRequired(p,'diameter', @(x) isempty(x)||(isnumeric(x)&&0<x));
 addParameter(p,'Filter', 'LoG', @(x)ischar(x));
 addParameter(p,'DarkBackground', true, @(x)islogical(x));
-addParameter(p,'MedianFilter', true, @(x)islogical(x));
+addParameter(p,'MedianFilter', false, @(x)islogical(x));
 addParameter(p,'KernelSize', [], @(x)isnumeric(x)&&x>=1);
 addParameter(p,'OverlapFilter', false, @(x)islogical(x));
 addParameter(p,'QualityFilter', 0.1, @(x)isnumeric(x)&&x>=0 &&x<=1);
-addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0); 
-addParameter(p,'GPU', false, @(x)islogical(x));
+addParameter(p,'BorderWidth', [], @(x)isnumeric(x)&&x>=0);
 
 parse(p, image, diameter, varargin{:})
 
@@ -36,7 +35,7 @@ if p.Results.MedianFilter
     image=medfilt3(image);
 end
 %make the LoG kernel
-sigma_ = diameter/(sqrt(3)*2); %sigma = r / sqrt(D) 
+sigma_ = diameter/(sqrt(3)*2); %sigma = r / sqrt(D)
 
 if isempty(p.Results.KernelSize)
     %taken from trackmate DetectionUtils.java createLoGKernel ,
@@ -49,35 +48,11 @@ else
     kernelSize = p.Results.KernelSize;
 end
 
-%check on GPU
-if p.Results.GPU
-    if gpuDeviceCount==0
-        warning("No GPU devices found.  Running as 'GPU=false'");
-        p.Results.GPU =false;
-    end
-end
-
 kernel=LoG_kernel_3D(sigma_, kernelSize);
 
 %convolve with the kernel
-if p.Results.GPU
-try
-    image_conv = CUDAconvolution3D(image, kernel);
-catch e
-    disp(e.message);
-    disp("CUDAconvolution3D not found or not working, " + ...
-        "Falling back to matlab pieced convolution");
-        image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
-        image_conv = gather(image_conv);
-end
-else 
-    try
-        image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
-        image_conv = gather(image_conv);
-    catch
-        image_conv = convn(image, kernel, 'same');
-     end
-end
+image_conv = convn(image,kernel, 'same');
+
 
 %detect local maxima
 %alternative taken from scipy: apply maximum filter (=imdilate).
@@ -99,8 +74,8 @@ end
 [xs,ys, zs]=find3D(maxima);
 
 % each maximum is assiged a quality score.  for now just intensity.
-quality = zeros([size(xs),1]);
-for i=1:size(xs)
+quality = zeros([size(xs,1),1]);
+for i=1:size(xs,1)
     quality(i)=image_conv(xs(i), ys(i), zs(i));
 end
 quality=rescale(quality);
@@ -118,13 +93,7 @@ if p.Results.OverlapFilter
 end
 
     blobs = [xs,ys,zs, quality];
-    if ~isempty(blobs)
-    blobs = array2table(blobs,...
-    VariableNames={'x','y','z','Intensity'});
-    else
-        %return empty table
-        blobs= table('Size',[0,4],'VariableTypes',{'double','double','double','double'},'VariableNames',{'x','y','z','Intensity'});
-    end
+
 end
 
 function [xs, ys, zs] = find3D(array)
@@ -138,7 +107,7 @@ kernel=zeros([3 3 3]);
 kernel(:,:,1)= [0,0,0;0,-1,0;0,0,0];
 kernel(:,:,2)= [0,-1,0;-1,6,-1;0,-1,0];
 kernel(:,:,3)= [0,0,0;0,-1,0;0,0,0];
-end   
+end
 
 function kernel = LoG_kernel_3D(sigma_, kernel_size)
 %arrays of x, y coordinates distance from center

@@ -75,3 +75,11 @@ CUDA-compatible GPU.
 
 For images that are too large for GPU memory, ``blobdetect``/``blobdetect3D``
  can be applied in a tiled way, see example ``tiledBlobdetect.mlx.
+
+## Octave
+
+Download github branch ``octave`` to get the octave-compatible version, which 
+does not have any GPU options and returns an array.  Requires ``pkg load image``.  
+Also, ``medfilt3`` does not exist (yet) in octave image package, so the default 
+value of ``MedianFilter`` is ``false`` in the 3D version.
+
