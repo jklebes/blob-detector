@@ -28,7 +28,7 @@ image instead shows dark objects on light background set this to ```false```.  D
 
 ```MedianFilter``` The median filter prepocessing step improves quality, default ```true```.
 
-```QualityFilter``` Filter by (linearly rescaled) instensity, default ```0.1```.
+```QualityFilter``` Filter by (linearly rescaled) intensity, default ```0.1```.
 
 ```OverlapFilter``` Eliminate circles overlapping by more than radius.  default ```false```.
 Warning: slow, O(n^2) in number of particles found. 
