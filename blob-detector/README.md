@@ -60,7 +60,8 @@ be inspected using imshow.
 For a rough inspection of 3D data and blob coordinate list, call
 ```image_out=annotate_image(image, coords, diameters, z_height)``` to 
 return a 2D image that is a slice through the 3D data at ``z_height``, with 
-blobs marked by magenta circles that are slices through the detected spheres.
+blobs marked by magenta circles that are slices through the detected spheres
+and out-of-plane spheres marked with points.
 
 Alternatively, for immediate display as a figure, you could use matlab's ``viscircles``.
 
