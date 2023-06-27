@@ -61,22 +61,26 @@ kernel=LoG_kernel_3D(sigma_, kernelSize);
 
 %convolve with the kernel
 if p.Results.GPU
-try
-    image_conv = CUDAconvolution3D(image, kernel);
-catch e
-    disp(e.message);
-    disp("CUDAconvolution3D not found or not working, " + ...
-        "Falling back to matlab pieced convolution");
-        image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
-        image_conv = gather(image_conv);
-end
-else 
+    try
+        image_conv = CUDAconvolution3D(image, kernel);
+    catch e
+        disp(e.message);
+        disp("CUDAconvolution3D not found or not working, " + ...
+            "Falling back to matlab pieced convolution");
+        try
+            image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
+            image_conv = gather(image_conv);
+        catch
+            image_conv = convn(image, kernel, 'same');
+        end
+    end
+else
     try
         image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
         image_conv = gather(image_conv);
     catch
         image_conv = convn(image, kernel, 'same');
-     end
+    end
 end
 
 %detect local maxima

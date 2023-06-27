@@ -11,7 +11,7 @@ elseif size(blob_coords, 2)==4 %3D
     for i =1:size(blob_coords,1)
     dist = abs(z-blob_coords{i,3}) ;
     if dist>d/2
-        diameters(i)=0;
+        diameters(i)=1; %mark for point to indicate out-of-plane sphere
     else
         diameters(i)=round(sqrt((d/2)^2-dist^2))*2;
     end
@@ -30,15 +30,20 @@ function mask = circles_mask(dims, centers, diameters)
 % at 'centers' and diamters 'diameters'
 mask=zeros(dims);
 for i=1:size(centers)
-    if diameters(i)>0
-rad=(diameters(i)/2);
-rad_low = (rad)^2;
-rad_high=(rad+1)^2; %outline thickness of 1
-[x,y] = ndgrid(1:dims(1), 1:dims(2));
-cx=centers{i,1};
-cy=centers{i,2};
-d=(x-cx).^2+(y-cy).^2;
-mask = mask | (d < rad_high & d>= rad_low);
+    if diameters(i)>1
+        rad=diameters(i)/2;
+        rad_low = (rad)^2;
+        rad_high=(rad+1)^2; %outline thickness of 1
+        %TODO faster by smaller ndgrid, OR it with relevant part of image only
+        [x,y] = ndgrid(-(rad+1):rad+1, -(rad+1):rad+1);
+        cx=centers{i,1};
+        cy=centers{i,2};
+        d=x.^2+y.^2;
+        mask(cx-(rad+1):cx+rad+1, cy-(rad+1):cy+rad+1) = mask(cx-(rad+1):cx+rad+1, cy-(rad+1):cy+rad+1) | (d < rad_high & d>= rad_low);
+    elseif diameters(i)==1 %draw a point
+        cx=centers{i,1};
+        cy=centers{i,2};
+        mask(cx, cy) = 1;
     end
-end 
+end
 end

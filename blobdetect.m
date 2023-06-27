@@ -52,16 +52,26 @@ switch p.Results.Filter
         kernel=LoG_kernel(sigma, kernelSize);
         %convolve with the kernel
         if p.Results.GPU
-        try
-            image_conv = CUDAconvolution(image, kernel);
-        catch
-            disp("Falling back to matlab pieced convolution")
-            image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
-            image_conv = gather(image_conv);
-        end
+            try
+                image_conv = CUDAconvolution(image, kernel);
+            catch e
+                disp(e.message);
+                disp("CUDAconvolution not found or not working, " + ...
+                    "Falling back to matlab pieced convolution");
+                try
+                    image_conv = conv2(gpuArray(image), gpuArray(kernel), 'same');
+                    image_conv = gather(image_conv);
+                catch
+                    image_conv = conv2(image, kernel, 'same');
+                end
+            end
         else
-             image_conv = convn(gpuArray(image), gpuArray(kernel), 'same');
-             image_conv = gather(image_conv);
+            try
+                image_conv = conv2(gpuArray(image), gpuArray(kernel), 'same');
+                image_conv = gather(image_conv);
+            catch
+                image_conv = convn(image, kernel, 'same');
+            end
         end
     case "DoG"
         %smaller DoG sigma^2
@@ -108,8 +118,13 @@ if p.Results.OverlapFilter
     [xs,ys, quality] = overlap_filter(xs,ys,quality,diameter);
 end
 blobs = [xs,ys,quality];
-blobs = array2table(blobs,...
-    VariableNames={'x','y','Intensity'});
+if ~isempty(blobs)
+    blobs = array2table(blobs,...
+        VariableNames={'x','y','Intensity'});
+else
+    %return empty table
+    blobs= table('Size',[0,3],'VariableTypes',{'double','double','double'},'VariableNames',{'x','y','Intensity'});
+end
 end
 
 function kernel = Laplacian_kernel()
