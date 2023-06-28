@@ -39,7 +39,11 @@ for i=1:size(centers)
         cx=centers{i,1};
         cy=centers{i,2};
         d=x.^2+y.^2;
+        try
         mask(cx-(rad+1):cx+rad+1, cy-(rad+1):cy+rad+1) = mask(cx-(rad+1):cx+rad+1, cy-(rad+1):cy+rad+1) | (d < rad_high & d>= rad_low);
+        catch
+            disp([num2str(cx-(rad+1)) num2str(cx+rad+1) num2str(cy-(rad+1)) num2str(cy+rad+1)])
+        end
     elseif diameters(i)==1 %draw a point
         cx=centers{i,1};
         cy=centers{i,2};
