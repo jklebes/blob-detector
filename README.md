@@ -65,7 +65,7 @@ and out-of-plane spheres marked with points.
 
 For 3D volumes 
 
-``volume_out = annotate_volume(volume, blobcoords, diameter)`` 
+``volume_out = annotate_volume(image, blobcoords, diameter)`` 
 
 annotates the 3D data with magenta spheres,
 returning a m x n x p x c 3-channel 3D image volume that can be inspected with ``sliceViewer(volume_out)``.  
