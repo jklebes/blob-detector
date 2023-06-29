@@ -48,22 +48,28 @@ arguments same as ``blobdetect``.
 
 ```blobcoords=blobdetect3D(image,diameter)```
 
-## annotate_image
+## annotate_image, annotate_volume
 
 Simple utility to inspect output, adds magenta circles to the image.
 
 ```image_out=annotate_image(image, coords, diameters)```
 
 This returns an RGB array - the image with magenta circles added - which can then
-be inspected using imshow.
+be inspected using imshow.  Alternatively, for immediate display as a figure, you could use matlab's ``viscircles``.
 
-For a rough inspection of 3D data and blob coordinate list, call
+For a rough inspection of 3D data and blob coordinate list as 2D image, call
 ```image_out=annotate_image(image, coords, diameters, z_height)``` to 
 return a 2D image that is a slice through the 3D data at ``z_height``, with 
 blobs marked by magenta circles that are slices through the detected spheres
 and out-of-plane spheres marked with points.
 
-Alternatively, for immediate display as a figure, you could use matlab's ``viscircles``.
+For 3D volumes 
+
+``volume_out = annotate_volume(volume, coords, diameter)`` 
+
+annotates the 3D data with magenta spheres,
+returning a m x n x p x c 3-channel 3D image volume that can be inspected with ``sliceViewer(volume_out)``.  
+Warning: produces data 3x the size of the original volume.
 
 ## Handling large and/or 3D images.
 Matlab's native convolution ``conv2()`` and ``convn()`` is slow for larger kernels, i.e.
