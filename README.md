@@ -52,20 +52,20 @@ arguments same as ``blobdetect``.
 
 Simple utility to inspect output, adds magenta circles to the image.
 
-```image_out=annotate_image(image, coords, diameters)```
+```image_out=annotate_image(image, blobcoords, diameters)```
 
 This returns an RGB array - the image with magenta circles added - which can then
 be inspected using imshow.  Alternatively, for immediate display as a figure, you could use matlab's ``viscircles``.
 
 For a rough inspection of 3D data and blob coordinate list as 2D image, call
-```image_out=annotate_image(image, coords, diameters, z_height)``` to 
+```image_out=annotate_image(image, blobcoords, diameters, z_height)``` to 
 return a 2D image that is a slice through the 3D data at ``z_height``, with 
 blobs marked by magenta circles that are slices through the detected spheres
 and out-of-plane spheres marked with points.
 
 For 3D volumes 
 
-``volume_out = annotate_volume(volume, coords, diameter)`` 
+``volume_out = annotate_volume(volume, blobcoords, diameter)`` 
 
 annotates the 3D data with magenta spheres,
 returning a m x n x p x c 3-channel 3D image volume that can be inspected with ``sliceViewer(volume_out)``.  
